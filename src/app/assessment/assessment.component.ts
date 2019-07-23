@@ -360,7 +360,7 @@ console.log('isIncompleted::', isIncompleted);
   }
 
   // get sequence detail and move on to next new task
-  async skipToNextTask(sequence) {
+  async skipToNextTask(sequence): Promise<any> {
     if (sequence) {
       return this.navigateBySequence(sequence);
     }
@@ -370,21 +370,31 @@ console.log('isIncompleted::', isIncompleted);
       return this.isMilestoneIncomplete(milestone);
     });
 
-    if (incompletedMilestoneIndex !== -1) {
-      return this.redirectToNextMilestoneTask(overview.Milestones[incompletedMilestoneIndex]);
-    }
 
+    // @TODO: implement and get unlocked activity
+
+    const unlockedActivity = 'Project planning (100 points)';
     return this.notificationService.alert({
-      header: 'Activity completed!',
-      message: 'You may now proceed to the next activity while we process your feedback.',
+      header: 'Congratulations',
+      message: `You have achieved ${unlockedActivity} and unlocked new content.`,
       buttons: [
         {
-          text: 'CONTINUE',
+          text: 'Continue',
+          handler: () => {
+            if (incompletedMilestoneIndex !== -1) {
+              return this.redirectToNextMilestoneTask(overview.Milestones[incompletedMilestoneIndex]);
+            }
+          }
+        },
+        {
+          text: 'View Unlocked Content',
           handler: () => {
             return this.router.navigate(['app', 'project']);
           }
         }
       ]
+    }).then(() => {
+      console.log('done alert popup');
     });
   }
 
