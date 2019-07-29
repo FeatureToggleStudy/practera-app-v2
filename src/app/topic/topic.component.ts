@@ -109,23 +109,31 @@ export class TopicComponent extends RouterEnter {
   }
 
   /**
-   * @name continue
+   * continue (mark as read) button
    * @description button action to trigger `nextStepPrompt`
    */
   async continue(): Promise<any> {
+    this.loadingTopic = true;
+
     // if topic has been marked as read
     if (this.btnToggleTopicIsDone) {
-      const nextSequence = await this.getNextSequence();
-      if (nextSequence) {
-        return this.navigateBySequence(nextSequence);
-      }
-
-      return this.router.navigate(['app', 'activity', this.activityId]);
+      return this.skipToNextTask();
     }
 
     // mark topic as done
-    await this.markAsDone().toPromise();
+    try {
+      await this.markAsDone().toPromise();
+    } catch (err) {
+      const toasted = await this.notificationService.alert({
+        header: 'Error marking topic as completed.',
+        message: err
+      });
+      this.loadingTopic = false;
+      throw new Error(err);
+    }
+
     const navigation = await this.nextStepPrompt();
+    this.loadingTopic = false;
     return navigation;
   }
 
@@ -137,52 +145,79 @@ export class TopicComponent extends RouterEnter {
   async previewFile(file) {
     if (this.isLoadingPreview === false) {
       this.isLoadingPreview = true;
-      const filestack = await this.filestackService.previewFile(file);
-      this.isLoadingPreview = false;
-      return filestack;
+
+      try {
+        const filestack = await this.filestackService.previewFile(file);
+        this.isLoadingPreview = false;
+        return filestack;
+      } catch (err) {
+        const toasted = await this.notificationService.alert({
+          header: 'Error Previewing file',
+          message: err
+        });
+        this.loadingTopic = false;
+        throw new Error(err);
+      }
     }
   }
 
-  /**
-   * @name navigateBySequence
-   * @param {[type]} sequence [description]
-   */
-  private navigateBySequence(sequence, options?: {
-    routeOnly?: boolean;
-  }) {
-    const { contextId, isForTeam, id, type } = sequence;
-    let route = ['app', 'activity', this.activityId];
-
-    switch (type) {
-      case 'Assessment':
-        route = ['assessment', 'assessment', this.activityId , contextId, id];
-        break;
-      case 'Topic':
-        route = ['topic', this.activityId, id];
-        break;
-    }
-
-    if (options && options.routeOnly) {
-      return route;
-    }
-
-    return this.router.navigate(route);
-  }
-
-  private async getNextSequence() {
+  private async getNextSequence(activity?) {
     let nextTask = null;
     const options = {
       id: this.id,
       teamId: this.storage.getUser().teamId
     };
 
-    this.loadingTopic = true;
-    const tasks = await this.activityService.getTaskWithStatusByActivityId(this.activityId);
+    if (!activity) {
+      activity = await this.activityService.getTasksByActivityId(this.storage.getUser().projectId, this.activityId);
+    }
+    nextTask = this.activityService.findNext(activity.Tasks, options);
 
-    nextTask = this.activityService.findNext(tasks, options);
     this.loadingTopic = false;
-
     return nextTask;
+  }
+
+  // allow progression if milestone isnt completed yet
+  async redirectToNextMilestoneTask(activity): Promise<any> {
+    const nextTask = await this.getNextSequence(activity);
+
+    if (this.activityId !== activity.id) {
+      await this.notificationService.alert({
+        header: 'Activity completed!',
+        message: 'Please proceed to the next activity.',
+        buttons: [
+          {
+            text: 'Ok',
+            role: 'cancel',
+          }
+        ]
+      });
+    }
+
+    switch (nextTask.type) {
+      case 'assessment':
+        return this.router.navigate(['assessment', 'assessment', activity.id, nextTask.context_id, nextTask.id]);
+
+      case 'topic':
+        return this.router.navigate(['topic', activity.id, nextTask.id]);
+    }
+  }
+
+  // get sequence detail and move on to next new task
+  async skipToNextTask(): Promise<boolean> {
+    try {
+      const activity = await this.activityService.getTasksByActivityId(this.storage.getUser().projectId, this.activityId);
+      if (activity) {
+        return this.redirectToNextMilestoneTask(activity);
+      }
+    } catch (err) {
+      const toasted = await this.notificationService.alert({
+        header: 'Project overview API Error',
+        message: err
+      });
+      this.loadingTopic = false;
+      throw new Error(err);
+    }
   }
 
   /**
@@ -190,37 +225,10 @@ export class TopicComponent extends RouterEnter {
    * @description
    */
   async nextStepPrompt(): Promise<any> {
-    const nextSequence = await this.getNextSequence();
-
-    if (nextSequence) {
-      return this.notificationService.alert({
-        header: 'Topic completed!',
-        message: 'You may now proceed to the next task.',
-        buttons: [
-          {
-            text: 'OK',
-            handler: () => {
-              return this.navigateBySequence(nextSequence);
-            }
-          }
-        ]
-      });
-    }
-
-    return this.notificationService.alert({
-      header: 'Activity completed!',
-      message: 'You may now proceed to the next milestone.',
-      buttons: [
-        {
-          text: 'Continue',
-          handler: () => {
-            return this.router.navigate(['app', 'project']);
-          }
-        }
-      ]
+    await this.notificationService.customToast({
+      message: 'Topic completed! Please proceed to the next learning task.'
     });
-
-    return this.router.navigate(['app', 'activity', this.activityId]);
+    return this.skipToNextTask();
   }
 
   back() {
@@ -243,7 +251,7 @@ export class TopicComponent extends RouterEnter {
           text: 'Yes',
           handler: () => {
             return this.markAsDone().subscribe(() => {
-              return this.notificationService.popUp('shortMessage', {
+              return this.notificationService.customToast({
                 message: 'You\'ve completed the topic!'
               }).then(() => this.router.navigate([
                 'app',

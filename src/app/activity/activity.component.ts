@@ -1,8 +1,8 @@
 import { Component, Input } from '@angular/core';
 import { Router, ActivatedRoute, ParamMap } from '@angular/router';
-import { switchMap } from 'rxjs/operators';
-import { Observable } from 'rxjs';
-import { ActivityService, Activity } from './activity.service';
+import { Observable, of, forkJoin } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { ActivityService, Activity, OverviewActivity, Task } from './activity.service';
 import { UtilsService } from '../services/utils.service';
 import { NotificationService } from '@shared/notification/notification.service';
 import { BrowserStorageService } from '@services/storage.service';
@@ -72,29 +72,57 @@ export class ActivityComponent extends RouterEnter {
       .subscribe(activity => {
         this.activity = activity;
         this.loadingActivity = false;
+
         this._getTasksProgress();
       });
   }
 
+  private _parallelAPI(requests) {
+    return forkJoin(requests)
+      .pipe(catchError(val => of(`API Response error: ${val}`)))
+      .subscribe(tasks => {
+        // throw error when it's string
+        if (typeof tasks === 'string') {
+          throw tasks;
+        }
+
+        tasks.forEach((res: Task) => {
+          const taskIndex = this.activity.tasks.findIndex(task => {
+            return task.id === res.id && task.type === 'Assessment';
+          });
+
+          this.activity.tasks[taskIndex] = res;
+        });
+      });
+  }
+
+  /**
+   * extract and insert "progress" & "status='done'" (for topic) value to the tasks element
+   */
   private _getTasksProgress(): void {
     this.activityService.getTasksProgress({
       model_id: this.activity.id,
       tasks: this.activity.tasks,
     }).subscribe(tasks => {
         this.activity.tasks = tasks;
+
+        const requests = [];
         this.activity.tasks.forEach((task, index) => {
           if (task.type === 'Assessment') {
-            this._getAssessmentStatus(index);
+            requests.push(this._getAssessmentStatus(index));
           }
         });
+
+        return this._parallelAPI(requests);
       });
   }
 
-  private _getAssessmentStatus(index) {
-    this.activityService.getAssessmentStatus(this.activity.tasks[index])
-      .subscribe(task => {
-        this.activity.tasks[index] = task;
-      });
+  /**
+   * involving in calling get submission API to get and evaluate assessment status based on latest submission status
+   * @param {number} index task array index value
+   */
+  private _getAssessmentStatus(index): Observable<any> {
+    return this.activityService.getAssessmentStatus(this.activity.tasks[index]);
   }
 
   private _getEvents() {
@@ -108,6 +136,25 @@ export class ActivityComponent extends RouterEnter {
 
   back() {
     this.router.navigate([ 'app', 'project' ]);
+  }
+
+  // check assessment lock or not before go to assessment.
+  checkAssessment(task) {
+    if (task.isLocked) {
+      this.notificationService.lockTeamAssessmentPopUp(
+        {
+          name: task.submitter.name,
+          image: task.submitter.image
+        } ,
+        (data) => {
+          if (data.data) {
+            this.goto(task.type, task.id);
+          }
+        }
+      );
+      return ;
+    }
+    this.goto(task.type, task.id);
   }
 
   goto(type, id) {
