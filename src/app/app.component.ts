@@ -31,6 +31,8 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
+    // need to set the theme color and card style immediately after page load
+    this.sharedService.onPageLoad();
     // @TODO: need to build a new micro service to get the config and serve the custom branding config from a microservice
     const domain = window.location.hostname;
     this.authService.getConfig({domain}).subscribe((response: any) => {
@@ -92,9 +94,6 @@ export class AppComponent implements OnInit {
     this.platform.ready().then(() => {
       // watch version update
       this.versionCheckService.initiateVersionCheck();
-
-      // this.statusBar.styleDefault();
-      // this.splashScreen.hide();
 
       // initialise Pusher
       this.pusherService.initantiate();
