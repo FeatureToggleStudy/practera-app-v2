@@ -8,8 +8,9 @@ import { Achievement } from '@app/achievements/achievements.service';
   styleUrls: ['achievement-pop-up.component.scss']
 })
 export class AchievementPopUpComponent {
-  type = '';
+  type: string;
   achievement: Achievement;
+  unlocks: any;
 
   constructor(
     public modalController: ModalController

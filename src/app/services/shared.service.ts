@@ -3,6 +3,21 @@ import { UtilsService } from '@services/utils.service';
 import { BrowserStorageService } from '@services/storage.service';
 import { NotificationService } from '@shared/notification/notification.service';
 import { RequestService } from '@shared/request/request.service';
+import { Achievement } from '@app/achievements/achievements.service';
+
+export interface PusherAchievement extends Achievement {
+  badge?: string;
+  Unlock: Unlock;
+}
+
+export interface Unlock {
+  type: string;
+  activity_id?: Array<number> | number;
+  tasks?: Array<{
+    id: number;
+    type: string;
+  }>;
+}
 
 export interface Profile {
   contact_number: string;
@@ -49,13 +64,21 @@ export class SharedService {
     // listen to the achievement event
     if (!this.achievementEvent) {
       this.achievementEvent = this.utils.getEvent('achievement').subscribe(event => {
-        this.notification.achievementPopUp('notification', {
-          id: event.meta.Achievement.id,
-          name: event.meta.Achievement.name,
-          description: event.meta.Achievement.description,
-          points: event.meta.Achievement.points,
-          image: event.meta.Achievement.badge
-        });
+        const Achievement: PusherAchievement = event.meta.Achievement;
+
+        this.notification.achievementPopUp(
+          'notification',
+          {
+            id: Achievement.id,
+            name: Achievement.name,
+            description: Achievement.description,
+            points: Achievement.points,
+            image: Achievement.badge
+          },
+          {
+            unlocks: Achievement.Unlock,
+          }
+        );
       });
     }
   }

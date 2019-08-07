@@ -8,7 +8,7 @@ import { Activity } from '../project/project.service';
 import { Question, Meta} from '../fast-feedback/fast-feedback.service';
 import { NotificationService } from '@shared/notification/notification.service';
 import { Event, EventsService } from '@app/events/events.service';
-import { SharedService } from '@services/shared.service';
+import { PusherAchievement, SharedService } from '@services/shared.service';
 
 /**
  * @name api
@@ -27,6 +27,10 @@ const api = {
     todoItem: 'api/v2/motivations/todo_item/edit.json'
   }
 };
+
+export interface TodoItemAchievement extends PusherAchievement {
+  program_id?: number;
+}
 
 export interface TodoItem {
   type?: string;
@@ -109,13 +113,21 @@ export class HomeService {
 
       // todo item for user to see the achievement earned message
       if (todoItem.identifier.includes('Achievement-')) {
-        this.notification.achievementPopUp('notification', {
-          id: todoItem.meta.id,
-          name: todoItem.meta.name,
-          description: todoItem.meta.description,
-          points: todoItem.meta.points,
-          image: todoItem.meta.badge
-        });
+        const achievement: TodoItemAchievement = todoItem.meta;
+
+        this.notification.achievementPopUp(
+          'notification',
+          {
+            id: achievement.id,
+            name: achievement.name,
+            description: achievement.description,
+            points: achievement.points,
+            image: achievement.badge
+          },
+          {
+            unlocks: achievement.Unlock,
+          }
+        );
       }
 
       if (todoItem.identifier.includes('EventReminder-')) {

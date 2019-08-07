@@ -105,16 +105,22 @@ export class NotificationService {
    *    points: "100",
    *    description: "qwert yuiop asdfg asdff"
    * });
+   * @param {string}      type        notification type (usually = 'notification')
+   * @param {Achievement} achievement
+   * @param {any}         options     any extra functionality
    */
-  async achievementPopUp(type: string, achievement: Achievement) {
+  async achievementPopUp(type: string, achievement: Achievement, options: any = {}) {
     const component = AchievementPopUpComponent;
     const componentProps = {
       type,
-      achievement
+      achievement,
+      unlocks: options.unlocks || undefined,
     };
+
     if (type === 'notification') {
       this.achievementService.markAchievementAsSeen(achievement.id);
     }
+
     const modal = await this.modal(component, componentProps, {
       cssClass: 'achievement-popup',
       keyboardClose: false,
