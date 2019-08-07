@@ -10,7 +10,7 @@ import { Achievement } from '@app/achievements/achievements.service';
 export class AchievementPopUpComponent {
   type: string;
   achievement: Achievement;
-  unlocks: any;
+  unlock: any;
 
   constructor(
     public modalController: ModalController

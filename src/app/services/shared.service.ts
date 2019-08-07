@@ -5,18 +5,18 @@ import { NotificationService } from '@shared/notification/notification.service';
 import { RequestService } from '@shared/request/request.service';
 import { Achievement } from '@app/achievements/achievements.service';
 
-export interface PusherAchievement extends Achievement {
-  badge?: string;
-  Unlock: Unlock;
-}
-
-export interface Unlock {
+interface Unlock {
   type: string;
   activity_id?: Array<number> | number;
   tasks?: Array<{
     id: number;
     type: string;
   }>;
+}
+
+export interface PusherAchievement extends Achievement {
+  badge?: string;
+  Unlock: Unlock;
 }
 
 export interface Profile {
@@ -64,19 +64,19 @@ export class SharedService {
     // listen to the achievement event
     if (!this.achievementEvent) {
       this.achievementEvent = this.utils.getEvent('achievement').subscribe(event => {
-        const Achievement: PusherAchievement = event.meta.Achievement;
+        const pusherAchievement: PusherAchievement = event.meta.Achievement;
 
         this.notification.achievementPopUp(
           'notification',
           {
-            id: Achievement.id,
-            name: Achievement.name,
-            description: Achievement.description,
-            points: Achievement.points,
-            image: Achievement.badge
+            id: pusherAchievement.id,
+            name: pusherAchievement.name,
+            description: pusherAchievement.description,
+            points: pusherAchievement.points,
+            image: pusherAchievement.badge
           },
           {
-            unlocks: Achievement.Unlock,
+            unlock: pusherAchievement.Unlock,
           }
         );
       });

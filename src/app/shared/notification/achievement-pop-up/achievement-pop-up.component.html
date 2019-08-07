@@ -24,6 +24,10 @@
       </ion-text>
     </div>
 
+    <div class="div-after-img" *ngIf="unlock">
+      <p class="title" *ngIf="unlock"></p>
+    </div>
+
     <div class="div-after-img">
       <ion-button (click)="confirmed()" shape="round" color="primary" expand="full">OK</ion-button>
     </div>

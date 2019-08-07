@@ -114,9 +114,10 @@ export class NotificationService {
     const componentProps = {
       type,
       achievement,
-      unlocks: options.unlocks || undefined,
+      unlock: options.unlock || undefined,
     };
-
+console.log(options);
+console.log(componentProps);
     if (type === 'notification') {
       this.achievementService.markAchievementAsSeen(achievement.id);
     }
