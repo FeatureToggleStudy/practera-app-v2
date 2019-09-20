@@ -25,7 +25,7 @@ export class ProjectComponent {
   @ViewChild('contentRef', {read: ElementRef, static: false}) contentRef: any;
   @ViewChildren('milestoneRef', {read: ElementRef}) milestoneRefs: QueryList<ElementRef>;
   public activeMilestone: Array<boolean> = [];
-  private milestonePositions: Array<number> = [];
+  public milestonePositions: Array<number> = [];
   private highlightedActivityId: number;
   private routeData: Subscription;
   private routeQuery: Subscription;
@@ -73,7 +73,7 @@ export class ProjectComponent {
           this.milestones = this._addActivitiesToEachMilestone(this.milestones, activities);
           this.loadingActivity = false;
 
-          this.projectProgresses = this.projectService.getProgress(this.milestones).subscribe(progresses => {
+          this.projectProgresses = this.projectService.getProgress().subscribe(progresses => {
             this.milestonePositions = this.milestoneRefs.map(milestoneRef => {
               return milestoneRef.nativeElement.offsetTop;
             });
@@ -121,18 +121,19 @@ export class ProjectComponent {
   }
 
   scrollTo(domId: string, index?: number): void {
-    if (index) {
+    // update active milestone status (mark whatever user select)
+    this.activeMilestone.fill(false);
+    if (index > -1) {
       this.activeMilestone[index] = true;
     }
 
-    // update active milestone status (mark whatever user select)
-    this.activeMilestone.fill(false);
 
     const el = document.getElementById(domId);
-    el.scrollIntoView({ block: 'start', behavior: 'smooth', inline: 'nearest' });
-
-    el.classList.add('highlighted');
-    setTimeout(() => el.classList.remove('highlighted'), 1000);
+    if (el) {
+      el.scrollIntoView({ block: 'start', behavior: 'smooth', inline: 'nearest' });
+      el.classList.add('highlighted');
+      setTimeout(() => el.classList.remove('highlighted'), 1000);
+    }
   }
 
   goToActivity(id) {

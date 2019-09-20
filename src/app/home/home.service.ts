@@ -44,7 +44,7 @@ export interface TodoItem {
     team_id?: number;
     team_member_id?: number;
     participants_only?: boolean;
-    due_date?: boolean;
+    due_date?: string;
   };
 }
 
@@ -427,6 +427,7 @@ export class HomeService {
             !this.utils.has(event, 'meta.AssessmentSubmissionReminder.reminded_date')
           ) {
           this.request.apiResponseFormatError('TodoItem meta format error');
+          return {};
         }
         return {
           type: 'assessment_submission_reminder',
