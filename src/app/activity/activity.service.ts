@@ -570,7 +570,14 @@ export class ActivityService {
 
     const nextIndex = currentIndex + 1;
     if (currentIndex !== -1 && tasks[nextIndex] && !this.isTaskCompleted(tasks[nextIndex])) {
-      return tasks[nextIndex];
+      const task = tasks[nextIndex];
+
+      // conditional return only
+      if (!task.is_team) {
+        return tasks[nextIndex];
+      } else if (task.is_team && !options.teamId) {
+        return tasks[nextIndex];
+      }
     }
 
     // condition: if next task is a completed activity, pick the first undone from the list
